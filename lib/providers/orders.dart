@@ -20,6 +20,10 @@ class OrderItem {
 
 class Orders with ChangeNotifier {
   List<OrderItem> _orders = [];
+  final String authToken;
+  final String userId;
+
+  Orders(this.authToken, this.userId, this._orders);
 
   List<OrderItem> get orders {
     return [..._orders];
@@ -29,7 +33,8 @@ class Orders with ChangeNotifier {
     try {
       var url = Uri.https(
           'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
-          'orders.json');
+          'orders/$userId.json',
+          {'auth': '$authToken'});
       final dateTime = DateTime.now();
 
       final response = await http.post(
@@ -67,7 +72,8 @@ class Orders with ChangeNotifier {
     try {
       var url = Uri.https(
           'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
-          'orders.json');
+          'orders/$userId.json',
+          {'auth': '$authToken'});
       final response = await http.get(url);
       final extractedData = json.decode(response.body) as Map<String, dynamic>;
       final List<OrderItem> loadedOrders = [];
