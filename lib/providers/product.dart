@@ -1,7 +1,6 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_complete_guide/models/http_exception.dart';
 import 'package:http/http.dart' as http;
 
 class Product with ChangeNotifier {
@@ -26,19 +25,20 @@ class Product with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> toggleFavoriteStatus() async {
+  Future<void> toggleFavoriteStatus(String token, String userId) async {
     final oldStatus = isFavorite;
     isFavorite = !isFavorite;
     notifyListeners();
     var url = Uri.https(
         'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
-        'products/$id.json');
+        'userFavorites/$userId/$id.json',
+        {'auth': '$token'});
     try {
-      var response = await http.patch(
+      var response = await http.put(
         url,
-        body: json.encode({
-          'isFavorite': isFavorite,
-        }),
+        body: json.encode(
+          isFavorite,
+        ),
       );
 
       if (response.statusCode >= 400) {

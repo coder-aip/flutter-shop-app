@@ -7,7 +7,11 @@ import '../providers/product.dart';
 import '../models/http_exception.dart';
 
 class Products with ChangeNotifier {
+  final String authToken;
+  final String userId;
   List<Product> _items = [];
+
+  Products(this.authToken, this.userId, this._items);
 
   // var _showFavoritesOnly = false;
 
@@ -26,7 +30,8 @@ class Products with ChangeNotifier {
     try {
       var url = Uri.https(
           'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
-          'products.json');
+          'products.json',
+          {'auth': '$authToken'});
       final response = await http.post(
         url,
         body: json.encode({
@@ -34,7 +39,7 @@ class Products with ChangeNotifier {
           'description': product.description,
           'imageUrl': product.imageUrl,
           'price': product.price,
-          'isFavorite': product.isFavorite,
+          'creatorId': userId,
         }),
       );
       final newProduct = Product(
@@ -62,7 +67,8 @@ class Products with ChangeNotifier {
       try {
         var url = Uri.https(
             'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
-            'products/$id.json');
+            'products/$id.json',
+            {'auth': '$authToken'});
         await http.patch(
           url,
           body: json.encode({
@@ -84,7 +90,8 @@ class Products with ChangeNotifier {
   Future<void> deleteProduct(String id) async {
     var url = Uri.https(
         'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
-        'products/$id.json');
+        'products/$id.json',
+        {'auth': '$authToken'});
     final existingProductIndex = _items.indexWhere((prod) => prod.id == id);
     var existingProduct = _items[existingProductIndex];
     _items.removeAt(existingProductIndex);
@@ -109,25 +116,45 @@ class Products with ChangeNotifier {
   //   notifyListeners();
   // }
 
-  Future<void> fetchAndSetProducts() async {
+  Future<void> fetchAndSetProducts([bool filterByUser = false]) async {
     try {
+      var param = filterByUser
+          ? {
+              'auth': '$authToken',
+              'orderBy': '"creatorId"',
+              'equalTo': '"$userId"'
+            }
+          : {
+              'auth': '$authToken',
+            };
       var url = Uri.https(
-          'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
-          'products.json');
+        'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
+        'products.json',
+        param,
+      );
       final response = await http.get(url);
       final extractedData = json.decode(response.body) as Map<String, dynamic>;
       final List<Product> loadedProducts = [];
       if (extractedData == null) {
         return;
       }
+
+      var favCheckUrl = Uri.https(
+          'udemy-flutter-course-9e9f5-default-rtdb.firebaseio.com',
+          'userFavorites/$userId.json',
+          {'auth': '$authToken'});
+      final favCheckResponse = await http.get(favCheckUrl);
+      final favCheckData = json.decode(favCheckResponse.body);
       extractedData.forEach((prodId, prodData) {
         loadedProducts.add(Product(
-            id: prodId,
-            title: prodData['title'],
-            description: prodData['description'],
-            price: prodData['price'],
-            imageUrl: prodData['imageUrl'],
-            isFavorite: prodData['isFavorite']));
+          id: prodId,
+          title: prodData['title'],
+          description: prodData['description'],
+          price: prodData['price'],
+          imageUrl: prodData['imageUrl'],
+          isFavorite:
+              favCheckData == null ? false : favCheckData[prodId] ?? false,
+        ));
       });
       _items = loadedProducts;
       notifyListeners();
